@@ -89,49 +89,55 @@ out:
 
 static int z_erofs_decompress_zxc(struct z_erofs_decompress_req *rq)
 {
-	int ret = 0;
-	char *dest = rq->out;
+	int ret;
 	char *src = rq->in;
-	char *buff = NULL;
-	unsigned int inputmargin = 0;
-	uint64_t total;
+	unsigned int inputmargin;
+	uint64_t bound;
+	char *buff;
+	zxc_dctx *dctx;
+	int64_t dsize;
 
 	inputmargin = z_erofs_fixup_insize((u8 *)src, rq->inputsize);
 	if (inputmargin >= rq->inputsize)
 		return -EFSCORRUPTED;
 
-	total = zxc_get_decompressed_size(src + inputmargin,
-					  rq->inputsize - inputmargin);
-	if (!total)
+	bound = zxc_decompress_block_bound(rq->decodedlength);
+	if (!bound)
 		return -EFSCORRUPTED;
 
-	if (rq->decodedskip || total != rq->decodedlength) {
-		buff = malloc(total);
-		if (!buff)
-			return -ENOMEM;
-		dest = buff;
-	}
+	buff = malloc(bound);
+	if (!buff)
+		return -ENOMEM;
 
-	ret = zxc_decompress(src + inputmargin, rq->inputsize - inputmargin,
-			     dest, total, NULL);
-	if (ret < 0) {
-		erofs_err("ZXC decompress failed: %s", zxc_error_name(ret));
-		ret = -EIO;
-		goto out;
-	}
-
-	if ((unsigned int)ret != total) {
-		erofs_err("ZXC decompress length mismatch %d, expected %llu",
-			  ret, (unsigned long long)total);
-		ret = -EIO;
-		goto out;
-	}
-	if (rq->decodedskip || total != rq->decodedlength)
-		memcpy(rq->out, dest + rq->decodedskip,
-		       rq->decodedlength - rq->decodedskip);
-out:
-	if (buff)
+	dctx = zxc_create_dctx();
+	if (!dctx) {
 		free(buff);
+		return -ENOMEM;
+	}
+
+	dsize = zxc_decompress_block(dctx, src + inputmargin,
+				     rq->inputsize - inputmargin,
+				     buff, bound, NULL);
+	zxc_free_dctx(dctx);
+
+	if (dsize < 0) {
+		erofs_err("ZXC decompress failed: %s",
+			  zxc_error_name((int)dsize));
+		ret = -EIO;
+		goto out;
+	}
+	if ((uint64_t)dsize != rq->decodedlength) {
+		erofs_err("ZXC decompress length mismatch %lld, expected %u",
+			  (long long)dsize, rq->decodedlength);
+		ret = -EIO;
+		goto out;
+	}
+
+	memcpy(rq->out, buff + rq->decodedskip,
+	       rq->decodedlength - rq->decodedskip);
+	ret = 0;
+out:
+	free(buff);
 	return ret;
 }
 #endif

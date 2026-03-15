@@ -579,17 +579,17 @@ AS_IF([test "x$with_qpl" != "xno"], [
 # Configure libzxc
 have_libzxc="no"
 AS_IF([test "x$with_libzxc" != "xno"], [
-  PKG_CHECK_MODULES([libzxc], [zxc], [
+  PKG_CHECK_MODULES([libzxc], [libzxc], [
     # Paranoia: don't trust the result reported by pkgconfig before trying out
     saved_LIBS="$LIBS"
     saved_CPPFLAGS=${CPPFLAGS}
     CPPFLAGS="${libzxc_CFLAGS} ${CPPFLAGS}"
     LIBS="${libzxc_LIBS} $LIBS"
     AC_CHECK_HEADERS([zxc_buffer.h],[
-      AC_CHECK_LIB(zxc, zxc_compress, [], [
-        AC_MSG_ERROR([libzxc doesn't work properly])])
-      AC_CHECK_DECL(zxc_compress, [have_libzxc="yes"],
-        [AC_MSG_ERROR([libzxc doesn't work properly])], [[
+      AC_CHECK_LIB(zxc, zxc_compress_block, [], [
+        AC_MSG_ERROR([libzxc lacks Block API (need >= 0.11.0)])])
+      AC_CHECK_DECL(zxc_compress_block, [have_libzxc="yes"],
+        [AC_MSG_ERROR([libzxc lacks Block API (need >= 0.11.0)])], [[
 #include <zxc_buffer.h>
       ]])
     ])
