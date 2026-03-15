@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0+ OR Apache-2.0
 /*
- * ZXC compressor for erofs-utils
+ * zxc compressor for erofs-utils
  *
- * Copyright (C) 2026, Bertrand Lebonnois
+ * Copyright (C) 2026, Bertrand Lebonnois <zxc.codec@gmail.com>
  */
 #include "erofs/internal.h"
 #include "erofs/print.h"
