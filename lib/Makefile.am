@@ -50,7 +50,7 @@ liberofs_la_SOURCES = config.c io.c cache.c super.c inode.c xattr.c exclude.c \
 liberofs_la_CFLAGS = -Wall ${libuuid_CFLAGS} -I$(top_srcdir)/include
 liberofs_la_LDFLAGS = ${libselinux_LIBS} ${libuuid_LIBS} ${liblz4_LIBS} \
 	${liblzma_LIBS} ${zlib_LIBS} ${libdeflate_LIBS} ${libzstd_LIBS} \
-	${libqpl_LIBS}
+	${libqpl_LIBS} ${libzxc_LIBS}
 if ENABLE_LZ4
 liberofs_la_CFLAGS += ${liblz4_CFLAGS}
 liberofs_la_SOURCES += compressor_lz4.c
@@ -71,6 +71,10 @@ endif
 if ENABLE_LIBZSTD
 liberofs_la_CFLAGS += ${libzstd_CFLAGS}
 liberofs_la_SOURCES += compressor_libzstd.c
+endif
+if ENABLE_LIBZXC
+liberofs_la_CFLAGS += ${libzxc_CFLAGS}
+liberofs_la_SOURCES += compressor_zxc.c
 endif
 if ENABLE_XXHASH
 liberofs_la_CFLAGS += ${libxxhash_CFLAGS}

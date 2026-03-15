@@ -156,6 +156,10 @@ AC_ARG_WITH(libzstd,
    [AS_HELP_STRING([--with-libzstd],
       [Enable and build with of libzstd support @<:@default=auto@:>@])])
 
+AC_ARG_WITH(libzxc,
+   [AS_HELP_STRING([--with-libzxc],
+      [Enable and build with libzxc support @<:@default=auto@:>@])])
+
 AC_ARG_WITH(qpl,
    [AS_HELP_STRING([--with-qpl],
       [Enable and build with Intel QPL support @<:@default=disabled@:>@])], [],
@@ -572,6 +576,31 @@ AS_IF([test "x$with_qpl" != "xno"], [
   ])
 ])
 
+# Configure libzxc
+have_libzxc="no"
+AS_IF([test "x$with_libzxc" != "xno"], [
+  PKG_CHECK_MODULES([libzxc], [zxc], [
+    # Paranoia: don't trust the result reported by pkgconfig before trying out
+    saved_LIBS="$LIBS"
+    saved_CPPFLAGS=${CPPFLAGS}
+    CPPFLAGS="${libzxc_CFLAGS} ${CPPFLAGS}"
+    LIBS="${libzxc_LIBS} $LIBS"
+    AC_CHECK_HEADERS([zxc_buffer.h],[
+      AC_CHECK_LIB(zxc, zxc_compress, [], [
+        AC_MSG_ERROR([libzxc doesn't work properly])])
+      AC_CHECK_DECL(zxc_compress, [have_libzxc="yes"],
+        [AC_MSG_ERROR([libzxc doesn't work properly])], [[
+#include <zxc_buffer.h>
+      ]])
+    ])
+    LIBS="${saved_LIBS}"
+    CPPFLAGS="${saved_CPPFLAGS}"], [
+    AS_IF([test "x$with_libzxc" = "xyes"], [
+      AC_MSG_ERROR([Cannot find proper libzxc])
+    ])
+  ])
+])
+
 # Configure libxxhash
 have_xxhash="no"
 AS_IF([test "x$with_xxhash" != "xno"], [
@@ -780,6 +809,7 @@ AM_CONDITIONAL([ENABLE_FUSE], [test "x${have_fuse}" = "xyes"])
 AM_CONDITIONAL([ENABLE_LIBLZMA], [test "x${have_liblzma}" = "xyes"])
 AM_CONDITIONAL([ENABLE_LIBDEFLATE], [test "x${have_libdeflate}" = "xyes"])
 AM_CONDITIONAL([ENABLE_LIBZSTD], [test "x${have_libzstd}" = "xyes"])
+AM_CONDITIONAL([ENABLE_LIBZXC], [test "x${have_libzxc}" = "xyes"])
 AM_CONDITIONAL([ENABLE_QPL], [test "x${have_qpl}" = "xyes"])
 AM_CONDITIONAL([ENABLE_XXHASH], [test "x${have_xxhash}" = "xyes"])
 AM_CONDITIONAL([ENABLE_LIBCURL], [test "x${have_libcurl}" = "xyes"])
@@ -827,6 +857,10 @@ fi
 
 if test "x$have_libzstd" = "xyes"; then
   AC_DEFINE([HAVE_LIBZSTD], 1, [Define to 1 if libzstd is found])
+fi
+
+if test "x$have_libzxc" = "xyes"; then
+  AC_DEFINE([HAVE_LIBZXC], 1, [Define to 1 if libzxc is found])
 fi
 
 if test "x$have_qpl" = "xyes"; then

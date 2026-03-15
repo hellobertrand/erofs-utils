@@ -45,6 +45,14 @@ static const struct erofs_algorithm erofs_algs[] = {
 		NULL,
 #endif
 	  Z_EROFS_COMPRESSION_ZSTD, false },
+
+	{ "zxc",
+#ifdef HAVE_LIBZXC
+		&erofs_compressor_zxc,
+#else
+		NULL,
+#endif
+	  Z_EROFS_COMPRESSION_ZXC, false },
 };
 
 int z_erofs_get_compress_algorithm_id(const struct erofs_compress *c)

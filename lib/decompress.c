@@ -10,7 +10,8 @@
 #include "erofs/print.h"
 
 #if defined(HAVE_LIBZSTD) || defined(HAVE_QPL) || defined(HAVE_LIBDEFLATE) || \
-    defined(HAVE_ZLIB) || defined(HAVE_LIBLZMA) || defined(LZ4_ENABLED)
+    defined(HAVE_ZLIB) || defined(HAVE_LIBLZMA) || defined(LZ4_ENABLED) || \
+    defined(HAVE_LIBZXC)
 static unsigned int z_erofs_fixup_insize(const u8 *padbuf, unsigned int padbufsize)
 {
 	unsigned int inputmargin;
@@ -75,6 +76,59 @@ static int z_erofs_decompress_zstd(struct z_erofs_decompress_req *rq)
 		memcpy(rq->out, dest + rq->decodedskip,
 		       rq->decodedlength - rq->decodedskip);
 	ret = 0;
+out:
+	if (buff)
+		free(buff);
+	return ret;
+}
+#endif
+
+#ifdef HAVE_LIBZXC
+#include <zxc_buffer.h>
+#include <zxc_error.h>
+
+static int z_erofs_decompress_zxc(struct z_erofs_decompress_req *rq)
+{
+	int ret = 0;
+	char *dest = rq->out;
+	char *src = rq->in;
+	char *buff = NULL;
+	unsigned int inputmargin = 0;
+	uint64_t total;
+
+	inputmargin = z_erofs_fixup_insize((u8 *)src, rq->inputsize);
+	if (inputmargin >= rq->inputsize)
+		return -EFSCORRUPTED;
+
+	total = zxc_get_decompressed_size(src + inputmargin,
+					  rq->inputsize - inputmargin);
+	if (!total)
+		return -EFSCORRUPTED;
+
+	if (rq->decodedskip || total != rq->decodedlength) {
+		buff = malloc(total);
+		if (!buff)
+			return -ENOMEM;
+		dest = buff;
+	}
+
+	ret = zxc_decompress(src + inputmargin, rq->inputsize - inputmargin,
+			     dest, total, NULL);
+	if (ret < 0) {
+		erofs_err("ZXC decompress failed: %s", zxc_error_name(ret));
+		ret = -EIO;
+		goto out;
+	}
+
+	if ((unsigned int)ret != total) {
+		erofs_err("ZXC decompress length mismatch %d, expected %llu",
+			  ret, (unsigned long long)total);
+		ret = -EIO;
+		goto out;
+	}
+	if (rq->decodedskip || total != rq->decodedlength)
+		memcpy(rq->out, dest + rq->decodedskip,
+		       rq->decodedlength - rq->decodedskip);
 out:
 	if (buff)
 		free(buff);
@@ -567,6 +621,10 @@ int z_erofs_decompress(struct z_erofs_decompress_req *rq)
 #ifdef HAVE_LIBZSTD
 	if (rq->alg == Z_EROFS_COMPRESSION_ZSTD)
 		return z_erofs_decompress_zstd(rq);
+#endif
+#ifdef HAVE_LIBZXC
+	if (rq->alg == Z_EROFS_COMPRESSION_ZXC)
+		return z_erofs_decompress_zxc(rq);
 #endif
 	return -EOPNOTSUPP;
 }

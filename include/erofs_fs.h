@@ -313,6 +313,7 @@ enum {
 	Z_EROFS_COMPRESSION_LZMA	= 1,
 	Z_EROFS_COMPRESSION_DEFLATE	= 2,
 	Z_EROFS_COMPRESSION_ZSTD	= 3,
+	Z_EROFS_COMPRESSION_ZXC		= 4,
 	Z_EROFS_COMPRESSION_MAX
 };
 #define Z_EROFS_ALL_COMPR_ALGS		((1 << Z_EROFS_COMPRESSION_MAX) - 1)
@@ -347,6 +348,12 @@ struct z_erofs_zstd_cfgs {
 } __packed;
 
 #define Z_EROFS_ZSTD_MAX_DICT_SIZE      Z_EROFS_PCLUSTER_MAX_SIZE
+
+/* 6 bytes (+ length field = 8 bytes) */
+struct z_erofs_zxc_cfgs {
+	u8 level;			/* compression level 1..5 */
+	u8 reserved[5];
+} __packed;
 
 /*
  * Enable COMPACTED_2B for EROFS_INODE_COMPRESSED_COMPACT inodes:
